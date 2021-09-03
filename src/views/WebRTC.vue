@@ -43,56 +43,13 @@ export default {
     start() {
       const socket = new WebSocket('ws://localhost:9001');
       //socket = new ScaleDrone("OXo4HSBTCQ8ehrxI");
-      socket.onopen = (event) => {
-        let room = socket.subscribe(this.roomName);
-        room.on("open", function (error) {
-          if (error) {
-            this.onError(error);
-          }
-        });
-        room.on("members", (members) => {
-          console.log("MEMBERS", members);
-          // 如果你是第二个链接到房间的人，就会创建offer
-          let isOffer = members.length === 2;
-          this.startWebRTC(isOffer);
-        });
-        // 从Scaledrone监听信令数据
-        room.on("data", (message, client) => {
-          //不处理自己发送消息
-          if (client.id === socket.clientId) {
-            return;
-          }
-          if (message.sdp) {
-            // 设置远程sdp, 在offer 或者 answer后
-            console.log("sdp消息：", message);
-            pc.setRemoteDescription(
-              new RTCSessionDescription(message.sdp),
-              () => {
-                // 当收到offer 后就接听
-                console.log("sdp消息类型：", pc.remoteDescription.type);
-                if (pc.remoteDescription.type === "offer") {
-                  pc.createAnswer()
-                    .then((answer) => {
-                      pc.setLocalDescription(
-                        answer,
-                        () => {
-                          this.sendMessage({ sdp: pc.localDescription });
-                        },
-                        this.onError
-                      );
-                    })
-                    .catch(this.onError);
-                }
-              },
-              this.onError
-            );
-          } else if (message.candidate) {
-            console.log("candidate消息：", message);
-            // 增加新的 ICE canidatet 到本地的链接中
-            pc.addIceCandidate(new RTCIceCandidate(message.candidate));
-          }
-        });
-      }
+      socket.addEventListener("open", () => {
+        socket.send(JSON.stringify({roomName: this.roomName}))
+      });
+      socket.addEventListener('message', function (event) {
+        console.log('Message from server ', event.data);
+      });
+      this.startWebRTC(false)
     },
     startWebRTC(isOffer) {
       const iceServer = {
