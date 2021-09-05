@@ -83,7 +83,7 @@ export default {
       return null;
     },
     pureDraw(x, y) {
-      ctx.fillRect(x, y, 1, 1)
+      ctx.fillRect(x, y, 5, 5)
     },
     draw(x, y) {
       this.pureDraw(x, y)
@@ -135,6 +135,14 @@ export default {
         } else if(message.type === 'roomInfo') {
             isOffer = message.clientSum > 1
             this.startWebRTC(isOffer)
+        } else if(message.type === 'canvasRestore') {
+            const img = new Image()
+            img.setAttribute('src', message.canvasNow)
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0)
+            }
+        } else if(message.type === 'otherUserLeft') {
+          this.sendMessage({canvasNow: this.$refs['board'].toDataURL()})
         } else if(message.sdp) {
             const {id, sdp} = message
             const curPC = id === 'mediaStream' ? pc : pc1

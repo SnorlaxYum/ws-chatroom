@@ -27,6 +27,10 @@ wss.on('connection', function connection(ws, req) {
               clients.set(clientNow, clientData)
               console.log('yep, we have a room.', [...clients.keys()])
               ws.send(JSON.stringify({type: 'roomInfo', clientSum: clients.size}))
+              const canvasNow = room.get('canvas')
+              if(canvasNow) {
+                ws.send(JSON.stringify({type: 'canvasRestore', canvasNow}))
+              }
             }
         } else {
             console.log('created a new room:', data.roomName)
@@ -45,6 +49,8 @@ wss.on('connection', function connection(ws, req) {
             connection.send(JSON.stringify(data))
           }
         }
+      } else if(data.canvasNow) {
+        room.set('canvas', data.canvasNow)
       }
     }
     // ws.send(`received ur message: ${JSON.stringify(message.toString())}`)
@@ -56,7 +62,9 @@ wss.on('connection', function connection(ws, req) {
       room.get('clients').delete(clientNow)
       console.log(clientNow, ' left')
     }
-    
+    // notify the only user of the leaving
+    const onlyCon = [...userConnections][0][1]
+    onlyCon.send(JSON.stringify({type: 'otherUserLeft'}))
   })
 
   ws.send(JSON.stringify({type: 'connected'}));
