@@ -20,6 +20,9 @@
         <div id="remoteVideoWrapper1" style="opacity: 0;" ref="remoteVideoWrapper1"><video id="remoteVideo1" ref="remoteVideo1"></video></div>
       </div>
     </div>
+    <div class='whiteboard'>
+      <canvas ref='board' width='640' height='480'/>
+    </div>
   </div>
 </template>
 
@@ -78,10 +81,46 @@ export default {
       if (r != null) return unescape(r[2]);
       return null;
     },
+    draw(e, ctx, x, y) {
+      e.preventDefault()
+      const {clientX, clientY} = e.changedTouches[0]
+      let finalX = clientX - x
+      let finalY = clientY - y
+      ctx.fillRect(finalX, finalY, 1, 1)
+    },
     start() {
       socket = new WebSocket('ws://localhost:9001');
+
+      let canvas = this.$refs['board']
+      const {x, y} = canvas.getBoundingClientRect()
+      let ctx = canvas.getContext('2d')
+      ctx.fillStyle = 'black'
+
+      canvas.addEventListener('touchstart', e => this.draw(e, ctx, x, y))
+
+      canvas.addEventListener('touchmove', e => this.draw(e, ctx, x, y))
+
+      canvas.addEventListener('touchend', e => this.draw(e, ctx, x, y))
+
+    //   canvas.addEventListener('mousemove', e => {
+    //     var x = e.pageX - canvas.offsetLeft; 
+    // var y = e.pageY - canvas.offsetTop; 
+    //   console.log(x-8, y-60)
+    //   })
+
+      canvas.addEventListener('mousedown', () => {
+        function draw(e) {
+          let finalX = e.clientX - x
+          let finalY = e.clientY - y
+          ctx.fillRect(finalX, finalY, 1, 1)
+        }
+        canvas.addEventListener('mousemove', draw)
+        document.addEventListener('mouseup', () => {
+          canvas.removeEventListener('mousemove', draw)
+        })
+      })
+
       let isOffer = false
-      //socket = new ScaleDrone("OXo4HSBTCQ8ehrxI");
       socket.addEventListener("open", () => {
         socket.send(JSON.stringify({type: 'init', roomName: this.roomName}))
       });
@@ -258,6 +297,13 @@ export default {
 
   .error {
     color: red;
+  }
+
+  .whiteboard {
+    canvas {
+      width: 640px;
+      height: 480px;
+    }
   }
 
   .camera>div {
