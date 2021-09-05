@@ -23,6 +23,8 @@ wss.on('connection', function connection(ws, req) {
             if(clients.size === 2) {
               ws.send(JSON.stringify({type: 'roomFull'}))
             } else {
+              // TODO: server-based canvas would be better
+              userConnections.get([...clients.keys()][0]).send(JSON.stringify({type: 'newUserCome'}))
               const clientData = {headers: req.headers, role: 'member'}
               clients.set(clientNow, clientData)
               console.log('yep, we have a room.', [...clients.keys()])
@@ -45,7 +47,7 @@ wss.on('connection', function connection(ws, req) {
     } else if(data.type === "roomMessage") {
       if(data.sdp||data.candidate||data.canvasDraw) {
         for(const [user, connection] of userConnections) {
-          if(user !== clientNow) {
+          if(user !== clientNow && room.get('clients').has(user)) {
             connection.send(JSON.stringify(data))
           }
         }
@@ -63,9 +65,14 @@ wss.on('connection', function connection(ws, req) {
       console.log(clientNow, ' left')
     }
     // notify the only user of the leaving
-    const onlyCon = [...userConnections][0][1]
-    onlyCon.send(JSON.stringify({type: 'otherUserLeft'}))
+    const roomUserLeft = [...room.get('clients').keys()]
+    if(roomUserLeft.length) {
+      const onlyCon = userConnections.get(roomUserLeft[0])
+      onlyCon.send(JSON.stringify({type: 'otherUserLeft'}))
+    }
   })
 
   ws.send(JSON.stringify({type: 'connected'}));
 });
+
+module.exports = {rooms, userConnections}
