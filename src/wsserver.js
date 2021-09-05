@@ -39,7 +39,7 @@ wss.on('connection', function connection(ws, req) {
             ws.send(JSON.stringify({type: 'roomInfo', clients}))
         }
     } else if(data.type === "roomMessage") {
-      if(data.sdp||data.candidate) {
+      if(data.sdp||data.candidate||data.canvasDraw) {
         for(const [user, connection] of userConnections) {
           if(user !== clientNow) {
             connection.send(JSON.stringify(data))

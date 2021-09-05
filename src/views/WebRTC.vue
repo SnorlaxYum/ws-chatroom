@@ -31,6 +31,7 @@
 let socket;
 let pc;
 let pc1;
+let ctx;
 
 export default {
   name: "userMedia",
@@ -81,38 +82,39 @@ export default {
       if (r != null) return unescape(r[2]);
       return null;
     },
-    draw(e, ctx, x, y) {
+    pureDraw(x, y) {
+      ctx.fillRect(x, y, 1, 1)
+    },
+    draw(x, y) {
+      this.pureDraw(x, y)
+      this.sendMessage({canvasDraw: [x, y]})
+    },
+    drawTouch(e, x, y) {
       e.preventDefault()
       const {clientX, clientY} = e.changedTouches[0]
       let finalX = clientX - x
       let finalY = clientY - y
-      ctx.fillRect(finalX, finalY, 1, 1)
+      this.draw(finalX, finalY)
     },
     start() {
       socket = new WebSocket('ws://localhost:9001');
 
       let canvas = this.$refs['board']
       const {x, y} = canvas.getBoundingClientRect()
-      let ctx = canvas.getContext('2d')
+      ctx = canvas.getContext('2d')
       ctx.fillStyle = 'black'
 
-      canvas.addEventListener('touchstart', e => this.draw(e, ctx, x, y))
+      canvas.addEventListener('touchstart', e => this.drawTouch(e, x, y))
 
-      canvas.addEventListener('touchmove', e => this.draw(e, ctx, x, y))
+      canvas.addEventListener('touchmove', e => this.drawTouch(e, x, y))
 
-      canvas.addEventListener('touchend', e => this.draw(e, ctx, x, y))
-
-    //   canvas.addEventListener('mousemove', e => {
-    //     var x = e.pageX - canvas.offsetLeft; 
-    // var y = e.pageY - canvas.offsetTop; 
-    //   console.log(x-8, y-60)
-    //   })
+      canvas.addEventListener('touchend', e => this.drawTouch(e, x, y))
 
       canvas.addEventListener('mousedown', () => {
-        function draw(e) {
+        const draw = (e) => {
           let finalX = e.clientX - x
           let finalY = e.clientY - y
-          ctx.fillRect(finalX, finalY, 1, 1)
+          this.draw(finalX, finalY)
         }
         canvas.addEventListener('mousemove', draw)
         document.addEventListener('mouseup', () => {
@@ -124,15 +126,15 @@ export default {
       socket.addEventListener("open", () => {
         socket.send(JSON.stringify({type: 'init', roomName: this.roomName}))
       });
-      const that = this
-      socket.addEventListener('message', function (event) {
+
+      socket.addEventListener('message', (event) => {
         console.log('Message from server ', event.data);
         const message = JSON.parse(event.data)
         if(message.type === 'roomFull') {
-          that.$refs['roomError'].textContent = 'The room is full, plz select another room!'
+          this.$refs['roomError'].textContent = 'The room is full, plz select another room!'
         } else if(message.type === 'roomInfo') {
             isOffer = message.clientSum > 1
-            that.startWebRTC(isOffer)
+            this.startWebRTC(isOffer)
         } else if(message.sdp) {
             const {id, sdp} = message
             const curPC = id === 'mediaStream' ? pc : pc1
@@ -146,12 +148,12 @@ export default {
                       curPC.setLocalDescription(
                         answer,
                         () => {
-                          that.sendMessage({id, sdp: curPC.localDescription})
+                          this.sendMessage({id, sdp: curPC.localDescription})
                         },
-                        that.onError
+                        this.onError
                       )
                     })
-                    .catch(that.onError)
+                    .catch(this.onError)
                 }
               },
               this.onError
@@ -161,6 +163,9 @@ export default {
           console.log('condidate消息', message)
           const curPC = id === 'mediaStream' ? pc : pc1
           curPC.addIceCandidate(new RTCIceCandidate(candidate))
+        } else if(message.canvasDraw) {
+          const [x,y] = message.canvasDraw
+          this.pureDraw(x, y)
         }
       });
     },
