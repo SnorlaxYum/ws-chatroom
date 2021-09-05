@@ -32,6 +32,7 @@ let socket;
 let pc;
 let pc1;
 let ctx;
+let canvas;
 
 export default {
   name: "userMedia",
@@ -89,9 +90,10 @@ export default {
       this.pureDraw(x, y)
       this.sendMessage({canvasDraw: [x, y]})
     },
-    drawTouch(e, x, y) {
+    drawTouch(e) {
       e.preventDefault()
       const {clientX, clientY} = e.changedTouches[0]
+      const {x, y} = canvas.getBoundingClientRect()
       let finalX = clientX - x
       let finalY = clientY - y
       this.draw(finalX, finalY)
@@ -99,22 +101,23 @@ export default {
     start() {
       socket = new WebSocket('ws://localhost:9001');
 
-      let canvas = this.$refs['board']
-      const {x, y} = canvas.getBoundingClientRect()
+      canvas = this.$refs['board']
       ctx = canvas.getContext('2d')
       ctx.fillStyle = 'black'
 
-      canvas.addEventListener('touchstart', e => this.drawTouch(e, x, y))
+      canvas.addEventListener('touchstart', e => this.drawTouch(e))
 
-      canvas.addEventListener('touchmove', e => this.drawTouch(e, x, y))
+      canvas.addEventListener('touchmove', e => this.drawTouch(e))
 
-      canvas.addEventListener('touchend', e => this.drawTouch(e, x, y))
+      canvas.addEventListener('touchend', e => this.drawTouch(e))
 
       canvas.addEventListener('mousedown', () => {
         const draw = (e) => {
+          const {x, y} = canvas.getBoundingClientRect()
           let finalX = e.clientX - x
           let finalY = e.clientY - y
           this.draw(finalX, finalY)
+          console.log(e, x, y)
         }
         canvas.addEventListener('mousemove', draw)
         document.addEventListener('mouseup', () => {
@@ -141,7 +144,7 @@ export default {
             img.onload = () => {
               ctx.drawImage(img, 0, 0)
             }
-        } else if(message.type === 'otherUserLeft') {
+        } else if(message.type === 'otherUserLeft' || message.type === 'newUserCome') {
           this.sendMessage({canvasNow: this.$refs['board'].toDataURL()})
         } else if(message.sdp) {
             const {id, sdp} = message
@@ -322,8 +325,16 @@ export default {
   .camera>div {
     position: relative;
     div {
+      width:640px;
       &:first-child {
         position: relative;
+        &::before {
+          position: absolute;
+          color: #fff;
+          width: 100%;
+          background: rgba(0,0,0,.5);
+          bottom: 4px;
+        }
         video {
           width: 640px;
           height: 480px;
@@ -334,6 +345,13 @@ export default {
         right: 10px;
         top: 0;
         z-index: 10;
+        &::before {
+          position: absolute;
+          color: #fff;
+          width: 100%;
+          background: rgba(0,0,0,.5);
+          bottom: 4px;
+        }
         video {
           width: 240px;
           height: 160px;
@@ -345,8 +363,16 @@ export default {
   .screen>div {
     position: relative;
     div {
+      width:640px;
       &:first-child {
         position: relative;
+        &::before {
+          position: absolute;
+          color: #fff;
+          width: 100%;
+          background: rgba(0,0,0,.5);
+          bottom: 4px;
+        }
         video {
           width: 640px;
           height: 480px;
@@ -357,6 +383,13 @@ export default {
         right: 10px;
         top: 0;
         z-index: 10;
+        &::before {
+          position: absolute;
+          color: #fff;
+          width: 100%;
+          background: rgba(0,0,0,.5);
+          bottom: 4px;
+        }
         video {
           width: 240px;
           height: 160px;
@@ -367,38 +400,19 @@ export default {
 
   #myVideoWrapper::before {
     content: "Me";
-    position: absolute;
-    width: 99%;
-    color: #fff;
-    background: rgba(0,0,0,.5);
-    bottom: 4px;
+    
   }
 
   #remoteVideoWrapper::before {
     content: "The Other";
-    position: absolute;
-    width: 99%;
-    color: #fff;
-    background: rgba(0,0,0,.5);
-    bottom: 4px;
   }
 
   #myVideoWrapper1::before {
     content: "Me";
-    position: absolute;
-    width: 99%;
-    color: #fff;
-    background: rgba(0,0,0,.5);
-    bottom: 4px;
   }
 
   #remoteVideoWrapper1::before {
     content: "The Other";
-    position: absolute;
-    width: 99%;
-    color: #fff;
-    background: rgba(0,0,0,.5);
-    bottom: 4px;
   }
 }
 </style>
