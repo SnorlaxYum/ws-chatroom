@@ -90,11 +90,12 @@ export default {
     pureDraw(x, y) {
       if(this.drawing) {
         ctx.lineTo(x, y)
+        this.drawPureEnd()
+        this.pureDraw(x, y)
       } else {
         this.drawing = true
         ctx.moveTo(x, y)
       }
-      ctx.fillRect(x, y, 1, 1)
     },
     draw(x, y) {
       this.pureDraw(x, y)
@@ -117,7 +118,6 @@ export default {
       if(this.drawing) {
         this.drawPureEnd()
         this.sendMessage({canvasTouchEnd: canvas.toDataURL()})
-        console.log('drawing end')
       }
     },
     start() {
@@ -169,8 +169,6 @@ export default {
             img.onload = () => {
               ctx.drawImage(img, 0, 0)
             }
-        } else if(message.type === 'otherUserLeft' || message.type === 'newUserCome') {
-          this.sendMessage({canvasNow: this.$refs['board'].toDataURL()})
         } else if(message.sdp) {
             const {id, sdp} = message
             const curPC = id === 'mediaStream' ? pc : pc1
