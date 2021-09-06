@@ -345,6 +345,7 @@ export default {
         right: 10px;
         top: 0;
         z-index: 10;
+        width: 227px;
         &::before {
           position: absolute;
           color: #fff;
@@ -383,6 +384,7 @@ export default {
         right: 10px;
         top: 0;
         z-index: 10;
+        width: 227px;
         &::before {
           position: absolute;
           color: #fff;

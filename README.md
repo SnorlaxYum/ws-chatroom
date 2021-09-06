@@ -6,24 +6,15 @@ yarn install
 ```
 
 ### Compiles and hot-reloads for development
+
+vue project:
 ```
 yarn run serve
 ```
 
-### Compiles and minifies for production
+websocket server:
 ```
-yarn run build
-```
-
-### Run your tests
-```
-yarn run test
+yarn run server
 ```
 
-### Lints and fixes files
-```
-yarn run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+then open 2 tabs with `http://localhost:8080/#/rtc?room=observable-1630773877993` (or any other same room name) to see the effect
