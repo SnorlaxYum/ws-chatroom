@@ -1,8 +1,8 @@
 const { WebSocketServer } = require('ws');
-const { createCanvas } = require('canvas')
+const { Canvas, Image } = require('canvas')
+const mergeImages = require('merge-images')
 
 const wss = new WebSocketServer({ port: 9001 });
-
 
 // since we are doing a simple demo, so we don't use a sql here.
 // we mimic the db using Maps
@@ -12,8 +12,8 @@ const userConnections = new Map()
 wss.on('connection', function connection(ws, req) {
 //   console.log(req.socket)
   let room
-  let canvas
-  let ctx
+  let clientData
+  let clients
   const clientNow = req.headers["sec-websocket-key"]
   userConnections.set(clientNow, ws)
   ws.on('message', function incoming(message) {
@@ -21,47 +21,62 @@ wss.on('connection', function connection(ws, req) {
     const data = JSON.parse(message)
     if(data.type === 'init') {
         room = rooms.get(data.roomName)
-        let clients
         if(room) {
             clients = room.get('clients')
             if(clients.size === 2) {
               ws.send(JSON.stringify({type: 'roomFull'}))
             } else {
-              const clientData = {headers: req.headers, role: 'member'}
+              clientData = {headers: req.headers, role: 'member'}
               clients.set(clientNow, clientData)
               console.log('yep, we have a room.', [...clients.keys()])
               ws.send(JSON.stringify({type: 'roomInfo', clientSum: clients.size}))
-              canvas = room.get('canvas')
-              ctx = canvas.getContext('2d')
-              ctx.fillStyle = 'black'
-              ws.send(JSON.stringify({type: 'canvasRestore', canvasNow: canvas.toDataURL()}))
+              if(room.has('canvasImg')) {
+                ws.send(JSON.stringify({type: 'canvasRestore', canvasNow: room.get('canvasImg')}))
+              }
             }
         } else {
             console.log('created a new room:', data.roomName)
             room = new Map()
-            canvas = createCanvas(640, 480)
-            ctx = canvas.getContext('2d')
-            ctx.fillStyle = 'black'
-            room.set('canvas', canvas)
-            room.set('clients', new Map())
-            const clientData = {headers: req.headers, role: 'creator'}
-            room.get('clients').set(clientNow, clientData)
-            clients = [...room.get('clients').keys()]
+            clients = new Map()
+            room.set('clients', clients)
+            clientData = {headers: req.headers, role: 'creator'}
+            clients.set(clientNow, clientData)
             rooms.set(data.roomName, room)
-            ws.send(JSON.stringify({type: 'roomInfo', clients}))
+            ws.send(JSON.stringify({type: 'roomInfo', clientSum: clients.size}))
         }
     } else if(data.type === "roomMessage") {
-      if(data.sdp||data.candidate||data.canvasDraw) {
-        if(data.canvasDraw) {
-          const [x, y] = data.canvasDraw
-          ctx.fillRect(x, y, 5, 5)
+      if(data.sdp||data.candidate||data.canvasTouchEnd||data.canvasDraw) {
+        if(data.canvasTouchEnd) {
+          if(clientData.canvasImg) {
+            mergeImages([clientData.canvasImg, data.canvasTouchEnd], {
+              Canvas,
+              Image
+            })
+            .then(imgNow => {
+              clientData.canvasImg = imgNow
+            });
+          } else {
+            clientData.canvasImg = data.canvasTouchEnd
+          }
+          if(room.has('canvasImg')) {
+            mergeImages([room.get('canvasImg'), data.canvasTouchEnd], {
+              Canvas,
+              Image
+            })
+            .then(imgNow => {
+              room.set('canvasImg', imgNow)
+            });
+          } else {
+            room.set('canvasImg', data.canvasTouchEnd)
+          }
         }
         for(const [user, connection] of userConnections) {
-          if(user !== clientNow && room.get('clients').has(user)) {
+          if(user !== clientNow && clients.has(user)) {
             connection.send(JSON.stringify(data))
           }
         }
       }
+      
     }
     // ws.send(`received ur message: ${JSON.stringify(message.toString())}`)
     // ws.send(`socket message: ${JSON.stringify(req.headers)}`)

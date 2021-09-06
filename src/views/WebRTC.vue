@@ -41,7 +41,8 @@ export default {
       roomUrl: "",
       roomName: "",
       myVideoIndex: 1,
-      myVideoIndex1: 1
+      myVideoIndex1: 1,
+      drawing: false
     };
   },
   async mounted() {
@@ -83,8 +84,17 @@ export default {
       if (r != null) return unescape(r[2]);
       return null;
     },
+    drawdot(x,y) {
+      ctx.fillRect(x, y, 1, 1)
+    },
     pureDraw(x, y) {
-      ctx.fillRect(x, y, 5, 5)
+      if(this.drawing) {
+        ctx.lineTo(x, y)
+      } else {
+        this.drawing = true
+        ctx.moveTo(x, y)
+      }
+      ctx.fillRect(x, y, 1, 1)
     },
     draw(x, y) {
       this.pureDraw(x, y)
@@ -98,6 +108,15 @@ export default {
       let finalY = clientY - y
       this.draw(finalX, finalY)
     },
+    drawPureEnd() {
+      ctx.lineWidth = 5
+      ctx.stroke()
+      this.drawing = false
+    },
+    drawEnd() {
+      this.drawPureEnd()
+      this.sendMessage({canvasTouchEnd: canvas.toDataURL()})
+    },
     start() {
       socket = new WebSocket('ws://localhost:9001');
 
@@ -109,7 +128,10 @@ export default {
 
       canvas.addEventListener('touchmove', e => this.drawTouch(e))
 
-      canvas.addEventListener('touchend', e => this.drawTouch(e))
+      canvas.addEventListener('touchend', e => {
+        this.drawTouch(e)
+        this.drawEnd()
+      })
 
       canvas.addEventListener('mousedown', () => {
         const draw = (e) => {
@@ -122,6 +144,7 @@ export default {
         canvas.addEventListener('mousemove', draw)
         document.addEventListener('mouseup', () => {
           canvas.removeEventListener('mousemove', draw)
+          this.drawEnd()
         })
       })
 
@@ -176,7 +199,11 @@ export default {
           curPC.addIceCandidate(new RTCIceCandidate(candidate))
         } else if(message.canvasDraw) {
           const [x,y] = message.canvasDraw
-          this.pureDraw(x, y)
+          this.drawdot(x, y)
+        } else if(message.canvasTouchEnd) {
+          const imgNow = new Image()
+          imgNow.onload = () => ctx.drawImage(imgNow, 0, 0)
+          imgNow.src = message.canvasTouchEnd
         }
       });
     },
