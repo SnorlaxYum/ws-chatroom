@@ -114,8 +114,11 @@ export default {
       this.drawing = false
     },
     drawEnd() {
-      this.drawPureEnd()
-      this.sendMessage({canvasTouchEnd: canvas.toDataURL()})
+      if(this.drawing) {
+        this.drawPureEnd()
+        this.sendMessage({canvasTouchEnd: canvas.toDataURL()})
+        console.log('drawing end')
+      }
     },
     start() {
       socket = new WebSocket('ws://localhost:9001');
@@ -139,7 +142,6 @@ export default {
           let finalX = e.clientX - x
           let finalY = e.clientY - y
           this.draw(finalX, finalY)
-          console.log(e, x, y)
         }
         canvas.addEventListener('mousemove', draw)
         document.addEventListener('mouseup', () => {
