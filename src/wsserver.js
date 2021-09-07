@@ -103,7 +103,9 @@ wss.on('connection', function connection(ws, req) {
       room.get('clients').delete(clientNow)
       console.log(clientNow, ' left')
       const other = userConnections.get([...room.get('clients').keys()][0])
-      other.send(JSON.stringify({type: 'otherLeft'}))
+      if(other) {
+        other.send(JSON.stringify({type: 'otherLeft'}))
+      }
     }
   })
 
