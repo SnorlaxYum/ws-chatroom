@@ -96,14 +96,14 @@ wss.on('connection', function connection(ws, req) {
       }
       
     }
-    // ws.send(`received ur message: ${JSON.stringify(message.toString())}`)
-    // ws.send(`socket message: ${JSON.stringify(req.headers)}`)
   });
   ws.on('close', () => {
     userConnections.delete(clientNow)
     if(room && room.get('clients')) {
       room.get('clients').delete(clientNow)
       console.log(clientNow, ' left')
+      const other = userConnections.get([...room.get('clients').keys()][0])
+      other.send(JSON.stringify({type: 'otherLeft'}))
     }
   })
 

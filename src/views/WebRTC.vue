@@ -125,6 +125,14 @@ export default {
         this.sendMessage({canvasTouchEnd: true})
       }
     },
+    otherLeft() {
+      const video = this.$refs["remoteVideo"]
+      video.srcObject = null
+      this.$refs['remoteVideoWrapper'].style.opacity = 0
+      const video1 = this.$refs["remoteVideo1"]
+      video1.srcObject = null
+      this.$refs['remoteVideoWrapper1'].style.opacity = 0
+    },
     start() {
       socket = new WebSocket('ws://localhost:9001');
 
@@ -170,37 +178,39 @@ export default {
         if(message.type === 'roomFull') {
           this.$refs['roomError'].textContent = 'The room is full, plz select another room!'
         } else if(message.type === 'roomInfo') {
-            isOffer = message.clientSum > 1
-            this.startWebRTC(isOffer)
+          isOffer = message.clientSum > 1
+          this.startWebRTC(isOffer)
         } else if(message.type === 'canvasRestore') {
-            const img = new Image()
-            img.setAttribute('src', message.canvasNow)
-            img.onload = () => {
-              ctx.drawImage(img, 0, 0)
-            }
+          const img = new Image()
+          img.setAttribute('src', message.canvasNow)
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0)
+          }
+        } else if(message.type === 'otherLeft') {
+          this.otherLeft()
         } else if(message.sdp) {
-            const {id, sdp} = message
-            const curPC = id === 'mediaStream' ? pc : pc1
-            curPC.setRemoteDescription(
-              new RTCSessionDescription(sdp),
-              () => {
-                console.log('sdp消息类型：', curPC.remoteDescription.type)
-                if(curPC.remoteDescription.type === "offer") {
-                  curPC.createAnswer()
-                    .then(answer => {
-                      curPC.setLocalDescription(
-                        answer,
-                        () => {
-                          this.sendMessage({id, sdp: curPC.localDescription})
-                        },
-                        this.onError
-                      )
-                    })
-                    .catch(this.onError)
-                }
-              },
-              this.onError
-            )
+          const {id, sdp} = message
+          const curPC = id === 'mediaStream' ? pc : pc1
+          curPC.setRemoteDescription(
+            new RTCSessionDescription(sdp),
+            () => {
+              console.log('sdp消息类型：', curPC.remoteDescription.type)
+              if(curPC.remoteDescription.type === "offer") {
+                curPC.createAnswer()
+                  .then(answer => {
+                    curPC.setLocalDescription(
+                      answer,
+                      () => {
+                        this.sendMessage({id, sdp: curPC.localDescription})
+                      },
+                      this.onError
+                    )
+                  })
+                  .catch(this.onError)
+              }
+            },
+            this.onError
+          )
         } else if(message.candidate) {
           const {id, candidate} = message
           console.log('condidate消息', message)
