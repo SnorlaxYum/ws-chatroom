@@ -1,5 +1,5 @@
 const { WebSocketServer } = require('ws');
-const { Canvas, Image } = require('canvas')
+const { createCanvas, Canvas, Image } = require('canvas')
 const mergeImages = require('merge-images')
 
 const wss = new WebSocketServer({ port: 9001 });
@@ -9,13 +9,36 @@ const wss = new WebSocketServer({ port: 9001 });
 const rooms = new Map()
 const userConnections = new Map()
 
+
+
 wss.on('connection', function connection(ws, req) {
 //   console.log(req.socket)
   let room
   let clientData
   let clients
+  let canvas = createCanvas(640, 480)
+  let canvasDrawing = false
+  let ctx = canvas.getContext('2d')
   const clientNow = req.headers["sec-websocket-key"]
   userConnections.set(clientNow, ws)
+
+  function pureDraw(x, y) {
+    if(canvasDrawing) {
+      ctx.lineTo(x, y)
+      drawPureEnd()
+      pureDraw(x, y)
+    } else {
+      canvasDrawing = true
+      ctx.moveTo(x, y)
+    }
+  }
+
+  function drawPureEnd() {
+    ctx.lineWidth = 5
+    ctx.stroke()
+    canvasDrawing = false
+  }
+
   ws.on('message', function incoming(message) {
     console.log('received mesg from %s: %s', req.headers["sec-websocket-key"], message);
     const data = JSON.parse(message)
@@ -45,21 +68,16 @@ wss.on('connection', function connection(ws, req) {
             ws.send(JSON.stringify({type: 'roomInfo', clientSum: clients.size}))
         }
     } else if(data.type === "roomMessage") {
-      if(data.sdp||data.candidate||data.canvasTouchEnd||data.canvasDraw) {
+      if(data.sdp||data.candidate||data.canvasTouchEnd||data.canvasDraw||data.canvasDraw) {
+        if(data.canvasDraw) {
+          const [x,y] = data.canvasDraw
+          pureDraw(x, y)
+        }
         if(data.canvasTouchEnd) {
-          if(clientData.canvasImg) {
-            mergeImages([clientData.canvasImg, data.canvasTouchEnd], {
-              Canvas,
-              Image
-            })
-            .then(imgNow => {
-              clientData.canvasImg = imgNow
-            });
-          } else {
-            clientData.canvasImg = data.canvasTouchEnd
-          }
+          drawPureEnd()
+
           if(room.has('canvasImg')) {
-            mergeImages([room.get('canvasImg'), data.canvasTouchEnd], {
+            mergeImages([room.get('canvasImg'), canvas.toDataURL()], {
               Canvas,
               Image
             })
@@ -67,9 +85,8 @@ wss.on('connection', function connection(ws, req) {
               room.set('canvasImg', imgNow)
             });
           } else {
-            room.set('canvasImg', data.canvasTouchEnd)
+            room.set('canvasImg', canvas.toDataURL())
           }
-          data.canvasTouchEnd = true
         }
         for(const [user, connection] of userConnections) {
           if(user !== clientNow && clients.has(user)) {

@@ -122,7 +122,7 @@ export default {
     drawEnd() {
       if(this.drawing) {
         this.drawPureEnd()
-        this.sendMessage({canvasTouchEnd: canvas.toDataURL()})
+        this.sendMessage({canvasTouchEnd: true})
       }
     },
     start() {
