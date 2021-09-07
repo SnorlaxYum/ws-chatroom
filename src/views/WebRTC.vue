@@ -261,7 +261,11 @@ export default {
         (stream) => {
           let videoEle = this.$refs["myVideo"]
           console.log("start local stream");
-          videoEle.srcObject = stream;
+          const selfStream = stream.clone()
+          for(const track of selfStream.getAudioTracks()) {
+            selfStream.removeTrack(track)
+          }
+          videoEle.srcObject = selfStream;
           videoEle.play();
           pc.addStream(stream);
         },
