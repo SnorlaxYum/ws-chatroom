@@ -21,7 +21,10 @@
       </div>
     </div>
     <div class='whiteboard'>
-      <canvas ref='board' width='640' height='480'/>
+      <div class='cv'>
+        <canvas ref='board' width='640' height='480'/>
+        <canvas ref='boardRemote' width='640' height='480'/>
+      </div>
     </div>
   </div>
 </template>
@@ -31,8 +34,10 @@
 let socket;
 let pc;
 let pc1;
-let ctx;
 let canvas;
+let ctx;
+let canvasRemote;
+let ctxRemote;
 
 export default {
   name: "userMedia",
@@ -87,14 +92,14 @@ export default {
     drawdot(x,y) {
       ctx.fillRect(x, y, 1, 1)
     },
-    pureDraw(x, y) {
+    pureDraw(x, y, curCtx=ctx) {
       if(this.drawing) {
-        ctx.lineTo(x, y)
-        this.drawPureEnd()
-        this.pureDraw(x, y)
+        curCtx.lineTo(x, y)
+        this.drawPureEnd(curCtx)
+        this.pureDraw(x, y, curCtx)
       } else {
         this.drawing = true
-        ctx.moveTo(x, y)
+        curCtx.moveTo(x, y)
       }
     },
     draw(x, y) {
@@ -109,9 +114,9 @@ export default {
       let finalY = clientY - y
       this.draw(finalX, finalY)
     },
-    drawPureEnd() {
-      ctx.lineWidth = 5
-      ctx.stroke()
+    drawPureEnd(curCtx=ctx) {
+      curCtx.lineWidth = 5
+      curCtx.stroke()
       this.drawing = false
     },
     drawEnd() {
@@ -123,9 +128,13 @@ export default {
     start() {
       socket = new WebSocket('ws://localhost:9001');
 
-      canvas = this.$refs['board']
-      ctx = canvas.getContext('2d')
-      ctx.fillStyle = 'black'
+      canvas = this.$refs['board'];
+      ctx = canvas.getContext('2d'); 
+      ctx.fillStyle = 'black';
+
+      canvasRemote = this.$refs['boardRemote'];
+      ctxRemote = canvasRemote.getContext('2d'); 
+      ctxRemote.fillStyle = 'black';
 
       canvas.addEventListener('touchstart', e => this.drawTouch(e))
 
@@ -199,11 +208,9 @@ export default {
           curPC.addIceCandidate(new RTCIceCandidate(candidate))
         } else if(message.canvasDraw) {
           const [x,y] = message.canvasDraw
-          this.drawdot(x, y)
+          this.pureDraw(x, y, ctxRemote)
         } else if(message.canvasTouchEnd) {
-          const imgNow = new Image()
-          imgNow.onload = () => ctx.drawImage(imgNow, 0, 0)
-          imgNow.src = message.canvasTouchEnd
+          this.drawPureEnd(ctxRemote)
         }
       });
     },
@@ -384,6 +391,20 @@ export default {
           width: 240px;
           height: 160px;
         }
+      }
+    }
+  }
+
+  .cv {
+    width: 640px;
+    margin: auto;
+    position: relative;
+    canvas {
+      &:nth-child(2) {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: -1;
       }
     }
   }

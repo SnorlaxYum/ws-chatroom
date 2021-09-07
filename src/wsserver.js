@@ -69,6 +69,7 @@ wss.on('connection', function connection(ws, req) {
           } else {
             room.set('canvasImg', data.canvasTouchEnd)
           }
+          data.canvasTouchEnd = true
         }
         for(const [user, connection] of userConnections) {
           if(user !== clientNow && clients.has(user)) {
